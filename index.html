@@ -15,11 +15,6 @@ body {
 
 h1 { margin-top: 20px; }
 
-.counter {
-  font-size: 22px;
-  margin-top: 10px;
-}
-
 .heart-wrapper {
   margin: 30px auto;
   width: 240px;
@@ -52,9 +47,7 @@ button {
   margin: 10px;
 }
 
-.pulse {
-  animation: pulse 1s infinite;
-}
+.pulse { animation: pulse 1s infinite; }
 
 @keyframes pulse {
   0% { transform: scale(1); }
@@ -79,7 +72,6 @@ button {
 <body>
 
 <h1>Нажми ❤️ и наполни сердце</h1>
-<div class="counter">Кликов: <span id="count">0</span> / 20</div>
 
 <div class="heart-wrapper">
   <div class="heart" id="heart">
@@ -90,84 +82,76 @@ button {
 <button id="likeBtn">❤️ Нажать</button>
 <button id="resetBtn">🔄 Сбросить</button>
 
-<!-- 🔥 FIREBASE (НОВЫЙ SDK, КАК НАДО) -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-  import {
-    getDatabase,
-    ref,
-    onValue,
-    runTransaction,
-    set
-  } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-analytics.js";
+import { getDatabase, ref, onValue, runTransaction, set } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-  // 🔐 ТВОЙ firebaseConfig (уже вставлен)
-  const firebaseConfig = {
-    apiKey: "AIzaSyDBg7ofdHdW9kQ92FGWGj55AvlNB9JnJyA",
-    authDomain: "heart-live-45767.firebaseapp.com",
-    databaseURL: "https://heart-live-45767-default-rtdb.firebaseio.com",
-    projectId: "heart-live-45767",
-    storageBucket: "heart-live-45767.firebasestorage.app",
-    messagingSenderId: "800719862944",
-    appId: "1:800719862944:web:006bf7d8e440c010c1ddc5"
-  };
+// 🔐 Твой firebaseConfig
+const firebaseConfig = {
+  apiKey: "AIzaSyDBg7ofdHdW9kQ92FGWGj55AvlNB9JnJyA",
+  authDomain: "heart-live-45767.firebaseapp.com",
+  databaseURL: "https://heart-live-45767-default-rtdb.firebaseio.com",
+  projectId: "heart-live-45767",
+  storageBucket: "heart-live-45767.firebasestorage.app",
+  messagingSenderId: "800719862944",
+  appId: "1:800719862944:web:006bf7d8e440c010c1ddc5",
+  measurementId: "G-1EG50NX7XB"
+};
 
-  // Инициализация
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-  const clicksRef = ref(db, "clicks");
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+const db = getDatabase(app);
+const clicksRef = ref(db, "clicks");
 
-  const MAX = 20;
-  const fill = document.getElementById("fill");
-  const heart = document.getElementById("heart");
-  const countText = document.getElementById("count");
+const MAX = 20;
+const fill = document.getElementById("fill");
+const heart = document.getElementById("heart");
 
-  const hasClicked = localStorage.getItem("clicked");
+document.getElementById("likeBtn").onclick = () => {
+  if (localStorage.getItem("clicked")) return;
+  localStorage.setItem("clicked", "true");
+  runTransaction(clicksRef, v => (v || 0) + 1);
+  spawnHeart();
+};
 
-  document.getElementById("likeBtn").onclick = () => {
-    if (localStorage.getItem("clicked")) {
-      alert("Ты уже нажал ❤️");
-      return;
-    }
-    localStorage.setItem("clicked", "true");
-    runTransaction(clicksRef, current => (current || 0) + 1);
-    spawnHeart();
-  };
+document.getElementById("resetBtn").onclick = () => {
+  set(clicksRef, 0);
+  localStorage.removeItem("clicked");
+  heart.classList.remove("pulse");
+  raining = false;
+};
 
-  document.getElementById("resetBtn").onclick = () => {
-    set(clicksRef, 0);
-    localStorage.removeItem("clicked");
-    heart.classList.remove("pulse");
-    raining = false;
-  };
+// Все клики в реальном времени для всех
+onValue(clicksRef, snapshot => {
+  const clicks = snapshot.val() || 0;
+  fill.style.height = Math.min((clicks / MAX) * 100, 100) + "%";
 
-  onValue(clicksRef, snapshot => {
-    const clicks = snapshot.val() || 0;
-    countText.textContent = clicks;
-    fill.style.height = Math.min((clicks / MAX) * 100, 100) + "%";
+  spawnHeart(); // летящее сердце для всех
 
-    if (clicks >= MAX) {
-      heart.classList.add("pulse");
-      startRain();
-    }
-  });
-
-  function spawnHeart() {
-    const h = document.createElement("div");
-    h.className = "flying-heart";
-    h.innerHTML = "❤️";
-    h.style.left = Math.random() * window.innerWidth + "px";
-    h.style.bottom = "0px";
-    document.body.appendChild(h);
-    setTimeout(() => h.remove(), 2000);
+  if (clicks >= MAX) {
+    heart.classList.add("pulse");
+    startRain();
   }
+});
 
-  let raining = false;
-  function startRain() {
-    if (raining) return;
-    raining = true;
-    setInterval(spawnHeart, 250);
-  }
+function spawnHeart() {
+  const h = document.createElement("div");
+  h.className = "flying-heart";
+  h.innerHTML = "❤️";
+  h.style.left = Math.random() * window.innerWidth + "px";
+  h.style.bottom = "0px";
+  document.body.appendChild(h);
+  setTimeout(() => h.remove(), 2000);
+}
+
+let raining = false;
+function startRain() {
+  if (raining) return;
+  raining = true;
+  setInterval(spawnHeart, 250);
+}
 </script>
 
 </body>
