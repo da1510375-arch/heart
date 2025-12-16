@@ -37,7 +37,7 @@ h1 { margin-top: 20px; }
   width: 100%;
   height: 0%;
   background: linear-gradient(to top, #ff0033, #ff5c8a);
-  transition: height 0.3s ease;
+  transition: height 0.15s ease;
 }
 
 button {
@@ -63,13 +63,13 @@ button {
   position: absolute;
   font-size: 28px;
   pointer-events: none;
-  animation: fly 1.5s forwards;
+  animation: fly 1s forwards;
 }
 
 @keyframes fly {
   0% { opacity: 1; transform: translateY(0) scale(1); }
-  50% { transform: translateY(-100px) scale(1.2); }
-  100% { opacity: 0; transform: translateY(-220px) scale(0.5); }
+  50% { transform: translateY(-80px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-200px) scale(0.5); }
 }
 </style>
 </head>
@@ -87,11 +87,11 @@ button {
 <button id="resetBtn">🔄 Сбросить</button>
 
 <script type="module">
-  // Firebase SDK
+  // Импортируем Firebase
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
   import { getDatabase, ref, onValue, runTransaction, set } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-  // 🔐 Новая конфигурация Firebase
+  // 🔐 Конфигурация Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyAGC_vYNw8viyAEMReQRv2HQQou9IDIi2E",
     authDomain: "heart-a503b.firebaseapp.com",
@@ -102,7 +102,7 @@ button {
     appId: "1:61779735226:web:2db19608bbd53f59854883"
   };
 
-  // Initialize Firebase
+  // Инициализация Firebase
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
   const clicksRef = ref(db, "clicks");
@@ -112,9 +112,9 @@ button {
   const heart = document.getElementById("heart");
   let raining = false;
 
-  // Нажатие кнопки ❤️
+  // Клик по кнопке ❤️
   document.getElementById("likeBtn").onclick = () => {
-    if (localStorage.getItem("clicked")) return; // защита от повторного клика
+    if (localStorage.getItem("clicked")) return; // защита от повторного клика с одного устройства
     localStorage.setItem("clicked", "true");
     runTransaction(clicksRef, v => (v || 0) + 1);
   };
@@ -127,25 +127,25 @@ button {
     raining = false;
   };
 
-  // Реальное время: все устройства видят клики и анимацию
+  // Реальное время: обновление сердца на всех устройствах
   onValue(clicksRef, snapshot => {
     const clicks = snapshot.val() || 0;
 
-    // Заполнение сердца снизу вверх
+    // Заполнение сердца мгновенно
     const percent = Math.min((clicks / MAX) * 100, 100);
     fill.style.height = percent + "%";
 
-    // Летящее сердце для всех
+    // Летящее сердце на всех устройствах
     spawnHeart();
 
-    // Финальный эффект после MAX кликов
-    if (clicks >= MAX) {
+    // После 20 кликов — пульсация и дождь
+    if (clicks >= MAX && !heart.classList.contains("pulse")) {
       heart.classList.add("pulse");
-      if (!raining) startRain();
+      startRain();
     }
   });
 
-  // Функция создания летящего сердца
+  // Создание летящего сердца
   function spawnHeart() {
     const h = document.createElement("div");
     h.className = "flying-heart";
@@ -153,13 +153,14 @@ button {
     h.style.left = Math.random() * (window.innerWidth - 30) + "px";
     h.style.bottom = "0px";
     document.body.appendChild(h);
-    setTimeout(() => h.remove(), 1500);
+    setTimeout(() => h.remove(), 1000);
   }
 
-  // Дождь сердечек после MAX
+  // Дождь сердечек после 20 кликов
   function startRain() {
+    if (raining) return;
     raining = true;
-    setInterval(spawnHeart, 150);
+    setInterval(spawnHeart, 200);
   }
 </script>
 
